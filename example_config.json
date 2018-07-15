@@ -1,0 +1,10 @@
+{
+	"listeningPort": 8080,
+	"dbHost": "localhost",
+	"dbPort": 27017,
+	"dbUser": null,
+	"dbPwd": null,
+	"authDB": "admin",
+	"dbName": "infovis",
+	"collectionName": "accidents"
+}
