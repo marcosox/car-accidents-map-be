@@ -7,5 +7,5 @@
 	"authDB": "admin",
 	"dbName": "infovis",
 	"collectionName": "accidents",
-	"queryLimitCount" : 500
+	"queryLimitCount": 500
 }
