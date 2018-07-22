@@ -56,7 +56,8 @@ The complete configuration file (with the default values) is this:
         "dbPwd" : null,
         "authDB" : "admin",
         "dbName" : "infovis",
-        "collectionName" : "accidents"
+        "collectionName" : "accidents",
+        "queryLimitCount" : 500
     }
 
 - `listeningPort`: API server listening port

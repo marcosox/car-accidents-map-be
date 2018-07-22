@@ -6,5 +6,6 @@
 	"dbPwd": null,
 	"authDB": "admin",
 	"dbName": "infovis",
-	"collectionName": "accidents"
+	"collectionName": "accidents",
+	"queryLimitCount" : 500
 }
