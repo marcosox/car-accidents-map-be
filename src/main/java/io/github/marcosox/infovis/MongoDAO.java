@@ -292,6 +292,10 @@ class MongoDAO {
         MongoDatabase db = getClient().getDatabase(this.dbName);
         MongoCollection<Document> collection = db.getCollection(this.collectionName);
 
+        if (field == null || field.isEmpty()) {
+            field = "anno"; // default
+        }
+
         List<Document> list = new ArrayList<>();
         List<Document> listWithMatch = new ArrayList<>();
         listWithMatch.add(new Document("$match", new Document(hField, hValue)));
