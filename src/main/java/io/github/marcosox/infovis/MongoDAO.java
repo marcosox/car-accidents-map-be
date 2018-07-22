@@ -15,6 +15,7 @@ import org.bson.Document;
 import java.util.*;
 import java.util.Map.Entry;
 
+
 class MongoDAO {
     private String host;
     private int port;
@@ -89,8 +90,12 @@ class MongoDAO {
     String getCount(String field, int limit) {
         JsonArray result = new JsonArray();
         MongoDatabase db = getClient().getDatabase(this.dbName);
-        MongoCollection<Document> collection = db.getCollection(collectionName);
+        MongoCollection<Document> collection = db.getCollection(this.collectionName);
         AggregateIterable<Document> iterable;
+
+        if (field == null || field.isEmpty()) {
+            field = "anno"; // default
+        }
 
         List<Document> list = new ArrayList<>();
         list.add(new Document("$project", new Document("field", "$" + field)));
@@ -99,17 +104,12 @@ class MongoDAO {
         }
         list.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
 
-        if (limit <= 0 || limit > 500) {
-            // non dovrebbe accadere a meno che non si cambia a mano nella request http
-            System.out.println("MongoDAO: Invalid LIMIT value, limit unset on query");
-        } else {
-            list.add(new Document("$sort", new Document("count", -1)));
-            list.add(new Document("$limit", limit));
-        }
+        list.add(new Document("$sort", new Document("count", -1)));
+        list.add(new Document("$limit",limit));
 
         iterable = collection.aggregate(list);
+        iterable.forEach((Block<Document>) result::add);
 
-        iterable.forEach((Block<Document>) d -> result.add(d.toJson()));
         return result.encodePrettily();
     }
 
@@ -118,13 +118,11 @@ class MongoDAO {
      *
      * @return un array di oggetti JSON con due campi: collezione e totale, per ogni collezione.
      */
-
     String getTotals() {
-
         MongoDatabase db = getClient().getDatabase(this.dbName);
-        MongoCollection<Document> incidenti = db.getCollection(collectionName);
+        MongoCollection<Document> incidenti = db.getCollection(this.collectionName);
         JsonObject risultato = new JsonObject();
-        risultato.put("incidenti", Long.toString(incidenti.count(null)));
+        risultato.put("incidenti", incidenti.count());
 
         // itera direttamente su queste collezioni e per ognuna conta il totale
         String[] collectionsList = {"veicoli", "persone"};
@@ -136,7 +134,6 @@ class MongoDAO {
             AggregateIterable<Document> result = incidenti.aggregate(pipeline);
             risultato.put(s, result.first().getInteger("count"));
         }
-
         return risultato.encodePrettily();
     }
 
@@ -167,7 +164,7 @@ class MongoDAO {
      * @return il documento dell'incidente o un documento vuoto
      */
     String getAccidentDetails(int id) {
-        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(collectionName);
+        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
         FindIterable<Document> iterable = collection.find(new Document("incidente", "incidente" + id));
         return iterable.first() == null ? new Document().toJson() : iterable.first().toJson();
     }
@@ -178,7 +175,7 @@ class MongoDAO {
      * @return una lista di oggetti {lat,lon,protocollo}
      */
     String getIncidenti() {
-        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(collectionName);
+        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
         FindIterable<Document> iterable = collection.find();
         JsonArray result = new JsonArray();
         iterable.forEach((Block<Document>) d -> {
@@ -206,8 +203,7 @@ class MongoDAO {
      * @return array di JSON con 3 campi: numero municipio, numero incidenti nel municipio, totale incidenti.
      */
     String getIncidentiMunicipi(String anno, String mese, String giorno, String ora) {
-
-        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(collectionName);
+        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
         Document matchFilter = new Document();    // filtro per mese anno, giorno e ora
         List<Document> aggregationPipeline = new ArrayList<>();
 
@@ -227,7 +223,11 @@ class MongoDAO {
         final long incidenti = collection.count(matchFilter);    // conta gli incidenti con filtro
         Document match = new Document("$match", matchFilter);    // includi il filtro in uno stage match della pipeline
         aggregationPipeline.add(match);
-        aggregationPipeline.add(new Document("$group", new Document("_id", "$numero_gruppo").append("count", new Document("$sum", 1))));
+        aggregationPipeline.add(new Document(
+                "$group", new Document("_id", "$numero_gruppo")
+                .append("count", new Document("$sum", 1)
+                )
+        ));
         AggregateIterable<Document> iterable = collection.aggregate(aggregationPipeline);
 
         JsonArray result = new JsonArray();
@@ -235,10 +235,9 @@ class MongoDAO {
             Document dc = new Document();
             dc.append("municipio", d.getInteger("_id"));
             dc.append("incidenti", d.getInteger("count"));
-            dc.append("totale", incidenti);
+            dc.append("totale", incidenti);     // TODO: remove this
             result.add(dc);
         });
-
         return result.encodePrettily();
     }
 
@@ -247,8 +246,8 @@ class MongoDAO {
      *
      * @return un array json con oggetti di tipo <data,totale>
      */
-    String getDailyAccidents() {
-        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(collectionName);
+    String getAccidentsByDay() {
+        MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
         List<Document> aggregationPipeline = new ArrayList<>();
         aggregationPipeline.add(
                 new Document("$group",
@@ -273,7 +272,6 @@ class MongoDAO {
             dc.append("count", count);
             result.add(dc);
         });
-
         return result.encodePrettily();
     }
 
@@ -284,17 +282,15 @@ class MongoDAO {
      * riporta quanti incidenti in una certa via
      *
      * @param field  campo su cui fare l'aggregazione
-     * @param limit  limite di risultati restituiti
      * @param hField campo del sottovalore da riportare
      * @param hValue valore su cui filtrare il sottovalore
      * @return un oggetto JSON contenente un array di documenti ognuno con campi
      * _id, count, highlight
      */
-
-    String getCountWithHighlight(String field, int limit, String hField, String hValue) {
+    String getAggregateCount(String field, int limit, String hField, String hValue) {
 
         MongoDatabase db = getClient().getDatabase(this.dbName);
-        MongoCollection<Document> collection = db.getCollection(collectionName);
+        MongoCollection<Document> collection = db.getCollection(this.collectionName);
 
         List<Document> list = new ArrayList<>();
         List<Document> listWithMatch = new ArrayList<>();
@@ -308,16 +304,10 @@ class MongoDAO {
         list.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
         listWithMatch.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
 
-        if (limit > 0 && limit < 500) {
-
-            list.add(new Document("$sort", new Document("count", -1)));
-            listWithMatch.add(new Document("$sort", new Document("count", -1)));
-            list.add(new Document("$limit", limit));
-            //listWithMatch.add(new Document("$limit", limit));
-        } else {
-            // non dovrebbe accadere a meno che non si cambia a mano nella request http
-            System.out.println("MongoDAO: Invalid LIMIT value, limit unset on query");
-        }
+        list.add(new Document("$sort", new Document("count", -1)));
+        listWithMatch.add(new Document("$sort", new Document("count", -1)));
+        list.add(new Document("$limit", limit));
+        //listWithMatch.add(new Document("$limit", limit));
 
         AggregateIterable<Document> iterable1 = collection.aggregate(list);
         AggregateIterable<Document> iterable2 = collection.aggregate(listWithMatch);
@@ -346,7 +336,6 @@ class MongoDAO {
             }
             result.add(e.getValue());
         }
-
         return result.encodePrettily();
     }
 }

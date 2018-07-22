@@ -18,33 +18,9 @@ public class MainVerticle extends AbstractVerticle {
     private static final String APP_NAME = "Car accidents map - backend";
     private final String APP_VERSION = getClass().getPackage().getSpecificationVersion();
 
-    /**
-     * Default listening port
-     */
-    private static final int DEFAULT_PORT = 8080;
-    /**
-     * Default mongodb address
-     */
-    private static final String DEFAULT_DB_HOST = "localhost";
-    /**
-     * Default mongodb port
-     */
-    private static final int DEFAULT_DB_PORT = 27017;
-    /**
-     * Default db name
-     */
-    private static final String DEFAULT_DB_NAME = "infovis";
-    /**
-     * Default default collection
-     */
-    private static final String DEFAULT_COLLECTION_NAME = "accidents";
-    /**
-     * Default authentication database
-     */
-    private static final String DEFAULT_AUTH_DB = "admin";
-
     // local vars
-    private int listeningPort = DEFAULT_PORT;
+    private int listeningPort;
+    private Integer limitCount;
     private MongoDAO dao;
 
     /**
@@ -66,7 +42,7 @@ public class MainVerticle extends AbstractVerticle {
 
         router.get("/GetTotal").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getTotals()));
         router.get("/Municipi").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getMunicipi()));
-        router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getDailyAccidents()));
+        router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidentsByDay()));
         router.get("/GetGeocodedAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getIncidenti()));
         router.get("/GetAccidentDetails").handler(this::handleAccidentDetail);
         router.get("/GetCountWithHighlight").handler(this::handleCountWithHighLights);
@@ -133,7 +109,7 @@ public class MainVerticle extends AbstractVerticle {
      */
     private void handleCount(RoutingContext r) {
         String fieldName = r.request().getParam("field");
-        int n = getInt(r.request().getParam("limit"), 20);
+        int n = getInt(r.request().getParam("limit"), limitCount);
         r.response().putHeader("content-type", "application/json").end(dao.getCount(fieldName, n));
     }
 
@@ -142,7 +118,7 @@ public class MainVerticle extends AbstractVerticle {
      * @param defaultValue default value if parameter is empty or null
      * @return param parsed as an int or the default value
      */
-    private int getInt(String param, int defaultValue) {    // TODO: extract defaultValue and put in config
+    private int getInt(String param, int defaultValue) {
         int n = defaultValue;
         if (param != null && !param.trim().isEmpty()) {
             try {
@@ -180,21 +156,22 @@ public class MainVerticle extends AbstractVerticle {
         String hField = r.request().getParam("highlight-field");
         String hValue = r.request().getParam("highlight-value");
         int n = getInt(r.request().getParam("limit"), 20);
-        r.response().putHeader("content-type", "application/json").end(dao.getCountWithHighlight(fieldName, n, hField, hValue));
+        r.response().putHeader("content-type", "application/json").end(dao.getAggregateCount(fieldName, n, hField, hValue));
     }
 
     /**
      * Application setup
      */
     private void setup() {
-        this.listeningPort = config().getInteger("listeningPort", DEFAULT_PORT);
-        String dbHost = Vertx.currentContext().config().getString("dbHost", DEFAULT_DB_HOST);
-        int dbPort = Vertx.currentContext().config().getInteger("dbPort", DEFAULT_DB_PORT);
+        this.listeningPort = config().getInteger("listeningPort", ConfigurationConstants.DEFAULT_PORT);
+        String dbHost = Vertx.currentContext().config().getString("dbHost", ConfigurationConstants.DEFAULT_DB_HOST);
+        int dbPort = Vertx.currentContext().config().getInteger("dbPort", ConfigurationConstants.DEFAULT_DB_PORT);
         String dbUser = Vertx.currentContext().config().getString("dbUser", null);
         String dbPwd = Vertx.currentContext().config().getString("dbPwd", null);
-        String authDB = Vertx.currentContext().config().getString("authDB", DEFAULT_AUTH_DB);
-        String dbName = Vertx.currentContext().config().getString("dbName", DEFAULT_DB_NAME);
-        String collectionName = Vertx.currentContext().config().getString("collectionName", DEFAULT_COLLECTION_NAME);
+        String authDB = Vertx.currentContext().config().getString("authDB", ConfigurationConstants.DEFAULT_AUTH_DB);
+        String dbName = Vertx.currentContext().config().getString("dbName", ConfigurationConstants.DEFAULT_DB_NAME);
+        String collectionName = Vertx.currentContext().config().getString("collectionName", ConfigurationConstants.DEFAULT_COLLECTION_NAME);
+        this.limitCount = Vertx.currentContext().config().getInteger("queryLimitCount", ConfigurationConstants.DEFAULT_RESULT_LIMIT);
         this.dao = new MongoDAO(dbHost, dbPort, dbName, collectionName, dbUser, dbPwd, authDB);
     }
 }
