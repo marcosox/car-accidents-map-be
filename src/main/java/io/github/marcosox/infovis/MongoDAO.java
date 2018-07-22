@@ -105,7 +105,7 @@ class MongoDAO {
         list.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
 
         list.add(new Document("$sort", new Document("count", -1)));
-        list.add(new Document("$limit",limit));
+        list.add(new Document("$limit", limit));
 
         iterable = collection.aggregate(list);
         iterable.forEach((Block<Document>) result::add);
@@ -298,7 +298,9 @@ class MongoDAO {
 
         List<Document> list = new ArrayList<>();
         List<Document> listWithMatch = new ArrayList<>();
-        listWithMatch.add(new Document("$match", new Document(hField, hValue)));
+        if (hField != null && !hField.isEmpty() && hValue != null && !hValue.isEmpty()) {
+            listWithMatch.add(new Document("$match", new Document(hField, hValue)));
+        }
         list.add(new Document("$project", new Document("field", "$" + field)));
         listWithMatch.add(new Document("$project", new Document("field", "$" + field)));
         if (field.contains(".")) {
@@ -319,16 +321,19 @@ class MongoDAO {
         final Map<String, Document> map = new TreeMap<>();
         iterable1.forEach((Block<Document>) d -> {
             System.out.println("iterable1: " + d.toJson());
-            map.put(d.get("_id").toString(), d);
+            String id = (d.get("_id") == null ? "null" : d.get("_id").toString());
+            map.put(id, d);
         });
 
         iterable2.forEach((Block<Document>) d -> {
-            //	System.out.println("iterable2: "+d.toJson());
+            System.out.println("iterable2: " + d.toJson());
             //	System.out.println("_id: "+d.get("_id").toString());
             //	System.out.println("mappa:"+map.keySet().toString());
-            Document entry = map.get(d.get("_id").toString());
+
+            String id = (d.get("_id") == null ? "null" : d.get("_id").toString());
+            Document entry = map.get(id);
             if (entry != null) {
-                //		System.out.println("from map: "+entry.toJson());
+                System.out.println("from map: " + entry.toJson());
                 entry.append("highlight", d.get("count"));
             }
         });
