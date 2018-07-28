@@ -30,9 +30,14 @@ the database and the collection used inside the class MongoDAO.java
 	- To run the fat JAR directly after build, use the `exec:exec@run-app` maven target.
 4. Run the app with `java -jar path/to/car-accidents-map-x.y.z-fat.jar`
 	- 
-5. Go to [http://localhost:8080/](http://localhost:8080/) to see the list of endpoints available
+5. Go to [http://localhost:8080/](http://localhost:8080/) to see the list of available endpoints
 6. Use the [web app](https://github.com/marcosox/car-accidents-map-fe) to visualize the data
 
+If you want to build the package in a container, this is the docker command:
+
+	docker run -it --rm -v"$(pwd)":/usr/src/app -w /usr/src/app maven:alpine mvn clean package
+
+You will find the fat jar in the `target` folder.
 
 ## Usage
 
@@ -72,3 +77,14 @@ The complete configuration file (with the default values) is this:
 #### Vertx options
 Since this application is packaged with a Vertx launcher, all the vertx options can be passed from the command line.
 For more informations see the [help page](http://vertx.io/docs/vertx-core/java/#_the_vertx_command_line)
+
+## Feedback and contacts
+If you think there is a bug, or something is missing or wrong with the documentation/support files, feel free to [open an issue].
+
+## License
+This software is released under the LGPL V3 license.
+A copy is included in the LICENSE file
+
+
+[open an issue]: https://github.com/marcosox/car-accidents-map-be/issues
+[releases page]: https://github.com/marcosox/car-accidents-map-be/releases
