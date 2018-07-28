@@ -29,7 +29,6 @@ the database and the collection used inside the class MongoDAO.java
 3. Build the project with Maven: `mvn package`. This will create a fat jar in the `target` folder.
 	- To run the fat JAR directly after build, use the `exec:exec@run-app` maven target.
 4. Run the app with `java -jar path/to/car-accidents-map-x.y.z-fat.jar`
-	- 
 5. Go to [http://localhost:8080/](http://localhost:8080/) to see the list of available endpoints
 6. Use the [web app](https://github.com/marcosox/car-accidents-map-fe) to visualize the data
 
