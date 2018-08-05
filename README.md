@@ -28,15 +28,22 @@ the database and the collection used inside the class MongoDAO.java
 2. Ensure MongoDB is running
 3. Build the project with Maven: `mvn package`. This will create a fat jar in the `target` folder.
 	- To run the fat JAR directly after build, use the `exec:exec@run-app` maven target.
-4. Run the app with `java -jar path/to/car-accidents-map-x.y.z-fat.jar`
+4. Run the app with `java -jar path/to/car-accidents-map-fat.jar`
 5. Go to [http://localhost:8080/](http://localhost:8080/) to see the list of available endpoints
 6. Use the [web app](https://github.com/marcosox/car-accidents-map-fe) to visualize the data
 
-If you want to build the package in a container, this is the docker command:
+#### Docker
 
-	docker run -it --rm -v"$(pwd)":/usr/src/app -w /usr/src/app maven:alpine mvn clean package
+The app can be built and run in a container, check the `Dockerfile`.
+The building is separated in two stages, in order to keep the final image as small as possible.
+Maven dependencies are cached to the maximum extent possible.
 
-You will find the fat jar in the `target` folder.
+Using docker, the app can be run locally without maven or java at all:
+
+	git clone https://github.com/marcosox/car-accidents-map-be.git
+	cd car-accidents-map-be
+	docker build . -t car-accidents-map-be
+	docker run -it -v "$(pwd)":/app/config -p 8080:8080 car-accidents-map-be
 
 ## Usage
 
