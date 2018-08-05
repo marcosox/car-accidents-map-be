@@ -12,8 +12,9 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.bson.Document;
 
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 class MongoDAO {
@@ -280,14 +281,18 @@ class MongoDAO {
 	 * Per ogni valore riporta il totale relativo di un altro campo passato come parametro.
 	 * es: riporta il conto di ogni veicolo nel authDatabase, e per ogni veicolo
 	 * riporta quanti incidenti in una certa via
+	 * TODO: anziche' fare la seconda query, filtrare il risultato della prima
 	 *
-	 * @param field  campo su cui fare l'aggregazione
-	 * @param hField campo del sottovalore da riportare
-	 * @param hValue valore su cui filtrare il sottovalore
+	 * @param field          campo su cui fare l'aggregazione
+	 * @param highlightField campo del sottovalore da riportare
+	 * @param highlightValue valore su cui filtrare il sottovalore
 	 * @return un oggetto JSON contenente un array di documenti ognuno con campi
 	 * _id, count, highlight
 	 */
-	String getAggregateCount(String field, int limit, String hField, String hValue) {
+	String getAggregateCount(String field, int limit, String highlightField, String highlightValue, boolean sortDescending) {
+
+		String countFieldName = "count";
+		String highlightFieldName = "highlight";
 
 		MongoDatabase db = getClient().getDatabase(this.dbName);
 		MongoCollection<Document> collection = db.getCollection(this.collectionName);
@@ -297,54 +302,46 @@ class MongoDAO {
 		}
 
 		List<Document> list = new ArrayList<>();
-		List<Document> listWithMatch = new ArrayList<>();
-		if (hField != null && !hField.isEmpty() && hValue != null && !hValue.isEmpty()) {
-			listWithMatch.add(new Document("$match", new Document(hField, hValue)));
-		}
 		list.add(new Document("$project", new Document("field", "$" + field)));
-		listWithMatch.add(new Document("$project", new Document("field", "$" + field)));
 		if (field.contains(".")) {
 			list.add(new Document("$unwind", "$field"));
+		}
+		list.add(new Document("$group", new Document("_id", "$field").append(countFieldName, new Document("$sum", 1))));
+		list.add(new Document("$sort", new Document("count", sortDescending ? -1 : 1)));
+		list.add(new Document("$limit", limit));
+
+		List<Document> listWithMatch = new ArrayList<>();
+		if (highlightField != null && !highlightField.isEmpty() && highlightValue != null && !highlightValue.isEmpty()) {
+			listWithMatch.add(new Document("$match", new Document(highlightField, highlightValue)));
+		}
+		listWithMatch.add(new Document("$project", new Document("field", "$" + field)));
+		if (field.contains(".")) {
 			listWithMatch.add(new Document("$unwind", "$field"));
 		}
-		list.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
-		listWithMatch.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
+		listWithMatch.add(new Document("$group", new Document("_id", "$field").append(countFieldName, new Document("$sum", 1))));
+		listWithMatch.add(new Document("$sort", new Document("count", sortDescending ? -1 : 1)));
+		listWithMatch.add(new Document("$limit", limit));
 
-		list.add(new Document("$sort", new Document("count", -1)));
-		listWithMatch.add(new Document("$sort", new Document("count", -1)));
-		list.add(new Document("$limit", limit));
-		//listWithMatch.add(new Document("$limit", limit));
+		AggregateIterable<Document> countIterable = collection.aggregate(list);
+		AggregateIterable<Document> highlightIterable = collection.aggregate(listWithMatch);
 
-		AggregateIterable<Document> iterable1 = collection.aggregate(list);
-		AggregateIterable<Document> iterable2 = collection.aggregate(listWithMatch);
-
-		final Map<String, Document> map = new TreeMap<>();
-		iterable1.forEach((Block<Document>) d -> {
-			System.out.println("iterable1: " + d.toJson());
-			String id = (d.get("_id") == null ? "null" : d.get("_id").toString());
-			map.put(id, d);
-		});
-
-		iterable2.forEach((Block<Document>) d -> {
-			System.out.println("iterable2: " + d.toJson());
-			//	System.out.println("_id: "+d.get("_id").toString());
-			//	System.out.println("mappa:"+map.keySet().toString());
-
-			String id = (d.get("_id") == null ? "null" : d.get("_id").toString());
-			Document entry = map.get(id);
-			if (entry != null) {
-				System.out.println("from map: " + entry.toJson());
-				entry.append("highlight", d.get("count"));
-			}
-		});
 		JsonArray result = new JsonArray();
-		for (Entry<String, Document> e : map.entrySet()) {
-			if (!e.getValue().containsKey("highlight")) {
-				System.out.println("aggiungo un highlight=0 a " + e.getKey());
-				e.getValue().append("highlight", 0);
-			}
-			result.add(e.getValue());
-		}
+		JsonObject highlightCounts = new JsonObject();
+
+		highlightIterable.forEach((Block<Document>) document -> highlightCounts.put(
+				String.valueOf(document.getOrDefault("_id", "null")),
+				document.getOrDefault(countFieldName, 0)));
+
+		countIterable.forEach((Block<Document>) document -> {
+			String id = String.valueOf(document.getOrDefault("_id", "null"));
+			int highlightCount = highlightCounts.getInteger(id, 0);
+			JsonObject entry = new JsonObject();
+			entry.put("_id", id);
+			entry.put(countFieldName, document.getInteger(countFieldName) - highlightCount);	// subtract highlights from count
+			entry.put(highlightFieldName, highlightCount);
+			result.add(entry);
+		});
+
 		return result.encodePrettily();
 	}
 }

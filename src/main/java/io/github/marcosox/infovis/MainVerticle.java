@@ -141,7 +141,7 @@ public class MainVerticle extends AbstractVerticle {
 		String giorno = r.request().getParam("giorno");
 		String ora = r.request().getParam("ora");
 
-		System.out.println(anno + "\tMese: " + mese + "\tGiorno: " + giorno + "\tOra: " + ora);
+		System.out.println("anno: "+anno + "\tMese: " + mese + "\tGiorno: " + giorno + "\tOra: " + ora);
 
 		r.response().putHeader("content-type", "application/json").end(dao.getIncidentiMunicipi(anno, mese, giorno, ora));
 	}
@@ -153,10 +153,12 @@ public class MainVerticle extends AbstractVerticle {
 	 */
 	private void handleCountWithHighLights(RoutingContext r) {
 		String fieldName = r.request().getParam("field");
-		String hField = r.request().getParam("highlight-field");
-		String hValue = r.request().getParam("highlight-value");
-		int n = getInt(r.request().getParam("limit"), 20);
-		r.response().putHeader("content-type", "application/json").end(dao.getAggregateCount(fieldName, n, hField, hValue));
+		String highlightField = r.request().getParam("highlight-field");
+		String highlightValue = r.request().getParam("highlight-value");
+		int limit = getInt(r.request().getParam("limit"), 20);
+		boolean sortDescending = !("asc".equals(r.request().getParam("sort")));
+		r.response().putHeader("content-type", "application/json")
+				.end(dao.getAggregateCount(fieldName, limit, highlightField, highlightValue, sortDescending));
 	}
 
 	/**
