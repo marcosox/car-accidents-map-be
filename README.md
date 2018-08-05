@@ -43,17 +43,28 @@ Using docker, the app can be run locally without maven or java at all:
 	git clone https://github.com/marcosox/car-accidents-map-be.git
 	cd car-accidents-map-be
 	docker build . -t car-accidents-map-be
+	
+	# Run with the default configuration:
+
+	docker run -it -p 8080:8080 car-accidents-map-be
+	
+	# Or overwrite the default configuration:
+	
+	cp example_config.json config.json
+	# edit the app settings
+	vi config.json
+	docker build . -t car-accidents-map-be
 	docker run -it -v "$(pwd)":/app/config -p 8080:8080 car-accidents-map-be
 
 ## Usage
 
 base usage:
 
-    java -jar path/to/car-accidents-map-x.y.z-fat.jar
+    java -jar path/to/car-accidents-map-fat.jar
     
 To change the application parameters pass the path of a json configuration file:
 
-    java -jar path/to/car-accidents-map-x.y.z-fat.jar -conf path/to/config.json
+    java -jar path/to/car-accidents-map-fat.jar -conf path/to/config.json
 
 An example configuration file is in the main project folder.
 
