@@ -88,7 +88,7 @@ class MongoDAO {
 	 * @return un oggetto JSON contenente un array di oggetti ognuno con campi
 	 * _id e count
 	 */
-	String getCount(String field, int limit) {
+	JsonArray getCount(String field, int limit) {
 		JsonArray result = new JsonArray();
 		MongoDatabase db = getClient().getDatabase(this.dbName);
 		MongoCollection<Document> collection = db.getCollection(this.collectionName);
@@ -106,12 +106,14 @@ class MongoDAO {
 		list.add(new Document("$group", new Document("_id", "$field").append("count", new Document("$sum", 1))));
 
 		list.add(new Document("$sort", new Document("count", -1)));
-		list.add(new Document("$limit", limit));
+		if (limit > 0) {
+			list.add(new Document("$limit", limit));
+		}
 
 		iterable = collection.aggregate(list);
 		iterable.forEach((Block<Document>) result::add);
 
-		return result.encodePrettily();
+		return result;
 	}
 
 	/**
@@ -119,7 +121,7 @@ class MongoDAO {
 	 *
 	 * @return un array di oggetti JSON con due campi: collezione e totale, per ogni collezione.
 	 */
-	String getTotals() {
+	JsonObject getTotals() {
 		MongoDatabase db = getClient().getDatabase(this.dbName);
 		MongoCollection<Document> incidenti = db.getCollection(this.collectionName);
 		JsonObject risultato = new JsonObject();
@@ -135,7 +137,8 @@ class MongoDAO {
 			AggregateIterable<Document> result = incidenti.aggregate(pipeline);
 			risultato.put(s, result.first().getInteger("count"));
 		}
-		return risultato.encodePrettily();
+		risultato.put("strade", this.getCount("strada", -1).size());
+		return risultato;
 	}
 
 	/**
@@ -143,7 +146,7 @@ class MongoDAO {
 	 *
 	 * @return Oggetto JSON con l'intera collezione di mongo
 	 */
-	String getMunicipi() {
+	JsonArray getDistricts() {
 		JsonArray result = new JsonArray();
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection("municipi");
 		FindIterable<Document> iterable = collection.find();
@@ -155,7 +158,7 @@ class MongoDAO {
 			municipio.put("description", d.getString("description"));
 			result.add(municipio);
 		});
-		return result.encodePrettily();
+		return result;
 	}
 
 	/**
@@ -175,7 +178,7 @@ class MongoDAO {
 	 *
 	 * @return una lista di oggetti {lat,lon,protocollo}
 	 */
-	String getIncidenti() {
+	JsonArray getAccidents() {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
 		FindIterable<Document> iterable = collection.find();
 		JsonArray result = new JsonArray();
@@ -191,7 +194,7 @@ class MongoDAO {
 				result.add(mappa);
 			}
 		});
-		return result.encodePrettily();
+		return result;
 	}
 
 	/**
@@ -203,7 +206,7 @@ class MongoDAO {
 	 * @param ora    ora da filtrare, se null e' ignorata
 	 * @return array di JSON con 3 campi: numero municipio, numero incidenti nel municipio, totale incidenti.
 	 */
-	String getIncidentiMunicipi(String anno, String mese, String giorno, String ora) {
+	JsonArray getIncidentiMunicipi(String anno, String mese, String giorno, String ora) {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
 		Document matchFilter = new Document();    // filtro per mese anno, giorno e ora
 		List<Document> aggregationPipeline = new ArrayList<>();
@@ -239,7 +242,7 @@ class MongoDAO {
 			dc.append("totale", incidenti);     // TODO: remove this
 			result.add(dc);
 		});
-		return result.encodePrettily();
+		return result;
 	}
 
 	/**
@@ -247,7 +250,7 @@ class MongoDAO {
 	 *
 	 * @return un array json con oggetti di tipo <data,totale>
 	 */
-	String getAccidentsByDay() {
+	JsonArray getAccidentsByDay() {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
 		List<Document> aggregationPipeline = new ArrayList<>();
 		aggregationPipeline.add(
@@ -273,7 +276,7 @@ class MongoDAO {
 			dc.append("count", count);
 			result.add(dc);
 		});
-		return result.encodePrettily();
+		return result;
 	}
 
 	/**
@@ -289,7 +292,7 @@ class MongoDAO {
 	 * @return un oggetto JSON contenente un array di documenti ognuno con campi
 	 * _id, count, highlight
 	 */
-	String getAggregateCount(String field, int limit, String highlightField, String highlightValue, boolean sortDescending) {
+	JsonArray getAggregateCount(String field, int limit, String highlightField, String highlightValue, boolean sortDescending) {
 
 		String countFieldName = "count";
 		String highlightFieldName = "highlight";
@@ -337,11 +340,11 @@ class MongoDAO {
 			int highlightCount = highlightCounts.getInteger(id, 0);
 			JsonObject entry = new JsonObject();
 			entry.put("_id", id);
-			entry.put(countFieldName, document.getInteger(countFieldName) - highlightCount);	// subtract highlights from count
+			entry.put(countFieldName, document.getInteger(countFieldName) - highlightCount);    // subtract highlights from count
 			entry.put(highlightFieldName, highlightCount);
 			result.add(entry);
 		});
 
-		return result.encodePrettily();
+		return result;
 	}
 }

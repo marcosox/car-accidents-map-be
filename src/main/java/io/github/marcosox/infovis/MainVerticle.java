@@ -40,10 +40,10 @@ public class MainVerticle extends AbstractVerticle {
 				.allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
 				.allowedHeader(HttpHeaders.ORIGIN.toString()));
 
-		router.get("/GetTotal").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getTotals()));
-		router.get("/Municipi").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getMunicipi()));
-		router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidentsByDay()));
-		router.get("/GetGeocodedAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getIncidenti()));
+		router.get("/GetTotals").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getTotals().encodePrettily()));
+		router.get("/Municipi").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getDistricts().encodePrettily()));
+		router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidentsByDay().encodePrettily()));
+		router.get("/GetGeocodedAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidents().encodePrettily()));
 		router.get("/GetAccidentDetails").handler(this::handleAccidentDetail);
 		router.get("/GetCountWithHighlight").handler(this::handleCountWithHighLights);
 		router.get("/GetCount").handler(this::handleCount);
@@ -110,7 +110,7 @@ public class MainVerticle extends AbstractVerticle {
 	private void handleCount(RoutingContext r) {
 		String fieldName = r.request().getParam("field");
 		int n = getInt(r.request().getParam("limit"), limitCount);
-		r.response().putHeader("content-type", "application/json").end(dao.getCount(fieldName, n));
+		r.response().putHeader("content-type", "application/json").end(dao.getCount(fieldName, n).encodePrettily());
 	}
 
 	/**
@@ -141,9 +141,9 @@ public class MainVerticle extends AbstractVerticle {
 		String giorno = r.request().getParam("giorno");
 		String ora = r.request().getParam("ora");
 
-		System.out.println("anno: "+anno + "\tMese: " + mese + "\tGiorno: " + giorno + "\tOra: " + ora);
+		System.out.println("anno: " + anno + "\tMese: " + mese + "\tGiorno: " + giorno + "\tOra: " + ora);
 
-		r.response().putHeader("content-type", "application/json").end(dao.getIncidentiMunicipi(anno, mese, giorno, ora));
+		r.response().putHeader("content-type", "application/json").end(dao.getIncidentiMunicipi(anno, mese, giorno, ora).encodePrettily());
 	}
 
 	/**
@@ -158,7 +158,7 @@ public class MainVerticle extends AbstractVerticle {
 		int limit = getInt(r.request().getParam("limit"), 20);
 		boolean sortDescending = !("asc".equals(r.request().getParam("sort")));
 		r.response().putHeader("content-type", "application/json")
-				.end(dao.getAggregateCount(fieldName, limit, highlightField, highlightValue, sortDescending));
+				.end(dao.getAggregateCount(fieldName, limit, highlightField, highlightValue, sortDescending).encodePrettily());
 	}
 
 	/**
