@@ -97,7 +97,7 @@
 									<resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
 								</transformer>
 							</transformers>
-							<outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar
+							<outputFile>${project.build.directory}/${project.artifactId}-fat.jar
 							</outputFile>
 						</configuration>
 					</execution>
@@ -131,7 +131,7 @@
 							<executable>java</executable>
 							<arguments>
 								<argument>-jar</argument>
-								<argument>target/${project.artifactId}-${project.version}-fat.jar</argument>
+								<argument>target/${project.artifactId}-fat.jar</argument>
 							</arguments>
 						</configuration>
 					</execution>
