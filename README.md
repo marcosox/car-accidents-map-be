@@ -22,7 +22,7 @@ Finally it was cleaned and persisted on a MongoDB collection to be used by the [
 
 1. Import the [example dataset](https://github.com/marcosox/Visualizzazione_incidenti/tree/master/Visualizzazione_incidenti/example_data) into MongoDB:  
 `mongoimport --db infovis --collection accidents --file /path/to/incidenti_geolocalizzati.json`  
-`mongoimport --db infovis --collection accidents --file /path/to/municipi.json`  
+`mongoimport --db infovis --collection districts --file /path/to/municipi.json`  
 Note that `infovis` and `accidents` must match respectively
 the database and the collection used inside the class MongoDAO.java  
 2. Ensure MongoDB is running
