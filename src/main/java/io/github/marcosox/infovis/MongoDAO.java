@@ -148,16 +148,8 @@ class MongoDAO {
 	 */
 	JsonArray getDistricts() {
 		JsonArray result = new JsonArray();
-		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection("municipi");
-		FindIterable<Document> iterable = collection.find();
-		iterable.forEach((Block<Document>) d -> {
-			JsonObject municipio = new JsonObject();
-			municipio.put("coord", d.getString("coord"));
-			municipio.put("name", d.getString("name"));
-			municipio.put("numero", String.valueOf(d.getInteger("numero")));
-			municipio.put("description", d.getString("description"));
-			result.add(municipio);
-		});
+		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection("districts");
+		collection.find().forEach((Block<Document>) d -> result.add(new JsonObject(d)));
 		return result;
 	}
 
