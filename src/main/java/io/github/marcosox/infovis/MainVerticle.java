@@ -5,7 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -43,7 +43,7 @@ public class MainVerticle extends AbstractVerticle {
 		router.get("/GetTotals").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getTotals().encodePrettily()));
 		router.get("/Municipi").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getDistricts().encodePrettily()));
 		router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidentsByDay().encodePrettily()));
-		router.get("/GetGeocodedAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidents().encodePrettily()));
+		router.get("/GetGeocodedAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAllAccidents().encodePrettily()));
 		router.get("/GetAccidentDetails").handler(this::handleAccidentDetail);
 		router.get("/GetCountWithHighlight").handler(this::handleCountWithHighLights);
 		router.get("/GetCount").handler(this::handleCount);
@@ -78,7 +78,11 @@ public class MainVerticle extends AbstractVerticle {
 		routesList.append("<ul>");
 		for (Route r : routes) {
 			if (r.getPath() != null) {
-				routesList.append("<li><a href='").append(r.getPath()).append("'>").append(r.getPath()).append("</a></li>");
+				routesList.append("<li><a href='")
+						.append(r.getPath())
+						.append("'>")
+						.append(r.getPath())
+						.append("</a></li>");
 			}
 		}
 		routesList.append("</ul>");
@@ -93,9 +97,9 @@ public class MainVerticle extends AbstractVerticle {
 	private void handleAccidentDetail(RoutingContext r) {
 		String id = r.request().getParam("id");
 		if (id != null) {
-			Object item = dao.getAccidentDetails(Integer.parseInt(id));
+			JsonObject item = dao.getAccidentDetails(Integer.parseInt(id));
 			if (item != null) {
-				r.response().putHeader("content-type", "application/json").end(Json.encodePrettily(item));
+				r.response().putHeader("content-type", "application/json").end(item.encodePrettily());
 			} else {
 				r.response().setStatusCode(404).end("item " + id + " not found");
 			}
@@ -110,7 +114,8 @@ public class MainVerticle extends AbstractVerticle {
 	private void handleCount(RoutingContext r) {
 		String fieldName = r.request().getParam("field");
 		int n = getInt(r.request().getParam("limit"), limitCount);
-		r.response().putHeader("content-type", "application/json").end(dao.getCount(fieldName, n).encodePrettily());
+		r.response().putHeader("content-type", "application/json").end(
+				dao.getCount(fieldName, n).encodePrettily());
 	}
 
 	/**
@@ -140,10 +145,8 @@ public class MainVerticle extends AbstractVerticle {
 		String mese = r.request().getParam("mese");
 		String giorno = r.request().getParam("giorno");
 		String ora = r.request().getParam("ora");
-
-		System.out.println("anno: " + anno + "\tMese: " + mese + "\tGiorno: " + giorno + "\tOra: " + ora);
-
-		r.response().putHeader("content-type", "application/json").end(dao.getIncidentiMunicipi(anno, mese, giorno, ora).encodePrettily());
+		r.response().putHeader("content-type", "application/json").end(
+				dao.getDistrictsAccidents(anno, mese, giorno, ora).encodePrettily());
 	}
 
 	/**
@@ -157,8 +160,8 @@ public class MainVerticle extends AbstractVerticle {
 		String highlightValue = r.request().getParam("highlight-value");
 		int limit = getInt(r.request().getParam("limit"), 20);
 		boolean sortDescending = !("asc".equals(r.request().getParam("sort")));
-		r.response().putHeader("content-type", "application/json")
-				.end(dao.getAggregateCount(fieldName, limit, highlightField, highlightValue, sortDescending).encodePrettily());
+		r.response().putHeader("content-type", "application/json").end(
+				dao.getAggregateCount(fieldName, limit, highlightField, highlightValue, sortDescending).encodePrettily());
 	}
 
 	/**

@@ -159,10 +159,14 @@ class MongoDAO {
 	 * @param id id incidente
 	 * @return il documento dell'incidente o un documento vuoto
 	 */
-	String getAccidentDetails(int id) {
+	JsonObject getAccidentDetails(int id) {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
 		FindIterable<Document> iterable = collection.find(new Document("incidente", "incidente" + id));
-		return iterable.first() == null ? new Document().toJson() : iterable.first().toJson();
+		JsonObject result = null;
+		if(iterable.first() == null){
+			result = new JsonObject(iterable.first());
+		}
+		return result;
 	}
 
 	/**
@@ -170,7 +174,7 @@ class MongoDAO {
 	 *
 	 * @return una lista di oggetti {lat,lon,protocollo}
 	 */
-	JsonArray getAccidents() {
+	JsonArray getAllAccidents() {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
 		FindIterable<Document> iterable = collection.find();
 		JsonArray result = new JsonArray();
@@ -182,7 +186,7 @@ class MongoDAO {
 				mappa.put("anno", d.getString("anno"));
 				mappa.put("numero_gruppo", "" + d.getInteger("numero_gruppo"));
 				mappa.put("ora", "" + d.getInteger("ora"));
-				mappa.put("protocollo", d.getString("incidente").replace("incidente", ""));
+				mappa.put("protocollo", d.getString("incidente"));
 				result.add(mappa);
 			}
 		});
@@ -198,7 +202,7 @@ class MongoDAO {
 	 * @param ora    ora da filtrare, se null e' ignorata
 	 * @return array di JSON con 3 campi: numero municipio, numero incidenti nel municipio, totale incidenti.
 	 */
-	JsonArray getIncidentiMunicipi(String anno, String mese, String giorno, String ora) {
+	JsonArray getDistrictsAccidents(String anno, String mese, String giorno, String ora) {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
 		Document matchFilter = new Document();    // filtro per mese anno, giorno e ora
 		List<Document> aggregationPipeline = new ArrayList<>();
