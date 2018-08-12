@@ -159,11 +159,11 @@ class MongoDAO {
 	 * @param id id incidente
 	 * @return il documento dell'incidente o un documento vuoto
 	 */
-	JsonObject getAccidentDetails(int id) {
+	JsonObject getAccidentDetails(String id) {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
-		FindIterable<Document> iterable = collection.find(new Document("incidente", "incidente" + id));
+		FindIterable<Document> iterable = collection.find(new Document("incidente", id));
 		JsonObject result = null;
-		if(iterable.first() == null){
+		if (iterable.first() != null) {
 			result = new JsonObject(iterable.first());
 		}
 		return result;
@@ -174,20 +174,29 @@ class MongoDAO {
 	 *
 	 * @return una lista di oggetti {lat,lon,protocollo}
 	 */
-	JsonArray getAllAccidents() {
+	JsonArray getAllAccidents(String year, String district, String hour) {
 		MongoCollection<Document> collection = getClient().getDatabase(this.dbName).getCollection(this.collectionName);
-		FindIterable<Document> iterable = collection.find();
+
+		Document matchFilter = new Document();
+		if (year != null && !year.isEmpty()) {
+			matchFilter.append("anno", year);
+		}
+		if (district != null && !district.isEmpty()) {
+			matchFilter.append("numero_gruppo", Integer.valueOf(district));
+		}
+		if (hour != null && !hour.isEmpty()) {
+			matchFilter.append("ora", Integer.valueOf(hour));
+		}
+
+		FindIterable<Document> iterable = collection.find(matchFilter);
+
 		JsonArray result = new JsonArray();
 		iterable.forEach((Block<Document>) d -> {
-			JsonObject mappa = new JsonObject();
-			if (d.getString("lat") != null) {
-				mappa.put("lat", d.getString("lat"));
-				mappa.put("lon", d.getString("lon"));
-				mappa.put("anno", d.getString("anno"));
-				mappa.put("numero_gruppo", "" + d.getInteger("numero_gruppo"));
-				mappa.put("ora", "" + d.getInteger("ora"));
-				mappa.put("protocollo", d.getString("incidente"));
-				result.add(mappa);
+			if(d.getString("lat") != null && d.getString("lon") != null) {
+				result.add(new JsonObject()
+						.put("lat", d.getString("lat"))
+						.put("lon", d.getString("lon"))
+						.put("protocollo", d.getString("incidente")));
 			}
 		});
 		return result;
@@ -220,7 +229,7 @@ class MongoDAO {
 			matchFilter.append("ora", Integer.valueOf(ora));    // ora e' un intero, mese giorno e anno sono stringhe
 		}
 
-		final long incidenti = collection.count(matchFilter);    // conta gli incidenti con filtro
+		long incidenti = collection.count(matchFilter);    // stores matches count
 		Document match = new Document("$match", matchFilter);    // includi il filtro in uno stage match della pipeline
 		aggregationPipeline.add(match);
 		aggregationPipeline.add(new Document(

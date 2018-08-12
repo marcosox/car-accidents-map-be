@@ -40,10 +40,13 @@ public class MainVerticle extends AbstractVerticle {
 				.allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
 				.allowedHeader(HttpHeaders.ORIGIN.toString()));
 
-		router.get("/GetTotals").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getTotals().encodePrettily()));
-		router.get("/Municipi").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getDistricts().encodePrettily()));
-		router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAccidentsByDay().encodePrettily()));
-		router.get("/GetGeocodedAccidents").handler(r -> r.response().putHeader("content-type", "application/json").end(dao.getAllAccidents().encodePrettily()));
+		router.get("/GetTotals").handler(r -> r.response().putHeader("content-type", "application/json")
+				.end(dao.getTotals().encodePrettily()));
+		router.get("/Municipi").handler(r -> r.response().putHeader("content-type", "application/json")
+				.end(dao.getDistricts().encodePrettily()));
+		router.get("/GetDailyAccidents").handler(r -> r.response().putHeader("content-type", "application/json")
+				.end(dao.getAccidentsByDay().encodePrettily()));
+		router.get("/GetGeocodedAccidents").handler(this::handleGeocodedAccidents);
 		router.get("/GetAccidentDetails").handler(this::handleAccidentDetail);
 		router.get("/GetCountWithHighlight").handler(this::handleCountWithHighLights);
 		router.get("/GetCount").handler(this::handleCount);
@@ -97,7 +100,7 @@ public class MainVerticle extends AbstractVerticle {
 	private void handleAccidentDetail(RoutingContext r) {
 		String id = r.request().getParam("id");
 		if (id != null) {
-			JsonObject item = dao.getAccidentDetails(Integer.parseInt(id));
+			JsonObject item = dao.getAccidentDetails(id);
 			if (item != null) {
 				r.response().putHeader("content-type", "application/json").end(item.encodePrettily());
 			} else {
@@ -147,6 +150,19 @@ public class MainVerticle extends AbstractVerticle {
 		String ora = r.request().getParam("ora");
 		r.response().putHeader("content-type", "application/json").end(
 				dao.getDistrictsAccidents(anno, mese, giorno, ora).encodePrettily());
+	}
+
+	/**
+	 * Handler
+	 *
+	 * @param r http request routing context
+	 */
+	private void handleGeocodedAccidents(RoutingContext r) {
+		String year = r.request().getParam("year");
+		String district = r.request().getParam("district");
+		String hour = r.request().getParam("hour");
+		r.response().putHeader("content-type", "application/json").end(
+				dao.getAllAccidents(year, district, hour).encodePrettily());
 	}
 
 	/**

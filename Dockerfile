@@ -25,7 +25,5 @@ COPY --from=BUILD /usr/src/maven/target/$JAR_FILENAME ./
 COPY ./example_config.json ./config/config.json
 VOLUME ["/app/config"]
 
-RUN env
-
 EXPOSE 8080
 CMD java -jar ${JAR_FILENAME} -conf config/config.json
